@@ -1,7 +1,5 @@
 import { useState } from "react";
-import Box from "@mui/material/Box";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
+import { Button, TextField } from "@mui/material";
 
 type Props = {
   readMatrix: (matrix: number[][]) => void;
@@ -28,14 +26,7 @@ const GraphInput = ({ readMatrix }: Props) => {
   };
 
   return (
-    <Box
-      component="form"
-      sx={{
-        m: 2,
-      }}
-      noValidate
-      autoComplete="off"
-    >
+    <>
       <TextField
         id="outlined-multiline-flexible"
         label="Matrix Input"
@@ -53,7 +44,7 @@ const GraphInput = ({ readMatrix }: Props) => {
       >
         Parse
       </Button>
-    </Box>
+    </>
   );
 };
 
