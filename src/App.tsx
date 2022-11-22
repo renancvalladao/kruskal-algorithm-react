@@ -182,7 +182,7 @@ function App() {
                   bgcolor: "background",
                   position: "relative",
                   overflow: "auto",
-                  maxHeight: 300,
+                  maxHeight: 500,
                   "& ul": { padding: 0 },
                 }}
                 subheader={<li />}
