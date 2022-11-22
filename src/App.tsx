@@ -25,6 +25,15 @@ type Edge = {
   color: string;
 };
 
+type DisjointSet = {
+  label: string;
+  parent: DisjointSet | null;
+};
+
+type DisjointSetObject = {
+  [key: string]: DisjointSet;
+};
+
 const options = {
   layout: {
     hierarchical: false,
@@ -46,6 +55,14 @@ const sortEdges = (edgesToBeSorted: Edge[]) => {
   });
 };
 
+const getParent = (disjointSet: DisjointSet): DisjointSet => {
+  let set = disjointSet;
+  while (set.parent !== null) {
+    set = set.parent;
+  }
+  return set;
+};
+
 function App() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -53,17 +70,31 @@ function App() {
   const [finished, setFinished] = useState(false);
   const [visitedEdges, setVisitedEdges] = useState<Edge[]>([]);
   const [counter, setCounter] = useState(0);
+  const [sets, setSets] = useState<DisjointSetObject>({});
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (running) {
       timer = setTimeout(() => {
         if (counter < edges.length) {
-          const edge = edges[visitedEdges.length];
-          edge.color = "red";
-          if (visitedEdges.length < 2) {
-            setVisitedEdges((prevEdges) => [...prevEdges, edge]);
+          const edge = edges[counter];
+          const from = edge.from;
+          const to = edge.to;
+          const parentFrom = getParent(sets[`${from}`]);
+          const parentTo = getParent(sets[`${to}`]);
+          if (parentFrom.label !== parentTo.label) {
+            edge.color = "green";
+            if (parseInt(parentFrom.label) < parseInt(parentTo.label)) {
+              parentTo.parent = parentFrom;
+            } else {
+              parentFrom.parent = parentTo;
+            }
+          } else {
+            edge.color = "red";
           }
+          setStatus(`Analyzing (${edge.from} - ${edge.to})...`);
+          setVisitedEdges((prevEdges) => [...prevEdges, edge]);
           setCounter((prevCounter) => prevCounter + 1);
         } else {
           setRunning(false);
@@ -73,7 +104,7 @@ function App() {
     }
 
     return () => clearTimeout(timer);
-  }, [running, edges, visitedEdges, counter]);
+  }, [running, edges, visitedEdges, counter, sets]);
 
   const readMatrix = (matrix: number[][]) => {
     const nodesArray: Node[] = [];
@@ -96,6 +127,11 @@ function App() {
     setNodes(nodesArray);
     setEdges(edgesArray);
   };
+
+  let solutionWeight = 0;
+  visitedEdges.forEach((edge: Edge) => {
+    if (edge.color === "green") solutionWeight += edge.weight;
+  });
 
   return (
     <>
@@ -151,18 +187,32 @@ function App() {
                 color="success"
                 sx={{ marginTop: 2 }}
                 onClick={() => {
-                  setRunning(true);
+                  setStatus("Sorting edges...");
                   const sortedEdges = sortEdges([...edges]);
+                  const newSets: DisjointSetObject = {};
+                  nodes.forEach((node: Node) => {
+                    newSets[node.label] = {
+                      label: node.label,
+                      parent: null,
+                    };
+                  });
+                  setRunning(true);
+                  setSets(newSets);
                   setEdges([...sortedEdges]);
                 }}
               >
                 Run
               </Button>
             )}
+            {running && (
+              <Typography align="center" variant="h6" gutterBottom>
+                {status}
+              </Typography>
+            )}
             {finished && (
               <>
                 <Typography align="center" variant="h6" gutterBottom>
-                  Solution
+                  {`Solution (weight:${solutionWeight})`}
                 </Typography>
                 <Graph
                   graph={{ nodes, edges: visitedEdges }}
