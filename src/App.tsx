@@ -47,12 +47,35 @@ const options = {
   height: "500px",
 };
 
-const sortEdges = (edgesToBeSorted: Edge[]) => {
-  return edgesToBeSorted.sort((firstEdge: Edge, secondEdge: Edge): number => {
-    if (firstEdge.weight < secondEdge.weight) return -1;
-    if (firstEdge.weight > secondEdge.weight) return 1;
-    return 0;
-  });
+const sortEdges = (edgesToBeSorted: Edge[]): Edge[] => {
+  if (edgesToBeSorted.length <= 1) return edgesToBeSorted;
+  const midPosition = Math.floor(edgesToBeSorted.length / 2);
+  const left = sortEdges(edgesToBeSorted.slice(0, midPosition));
+  const right = sortEdges(edgesToBeSorted.slice(midPosition));
+  return merge(left, right);
+};
+
+const merge = (leftArray: Edge[], rightArray: Edge[]): Edge[] => {
+  const resultArray: Edge[] = [];
+  while (leftArray.length > 0 && rightArray.length > 0) {
+    let edge: Edge;
+    if (leftArray[0].weight < rightArray[0].weight) {
+      edge = leftArray[0];
+      leftArray.shift();
+    } else {
+      edge = rightArray[0];
+      rightArray.shift();
+    }
+    resultArray.push(edge);
+  }
+  if (leftArray.length > 0) {
+    resultArray.push(...leftArray);
+  }
+  if (rightArray.length > 0) {
+    resultArray.push(...rightArray);
+  }
+
+  return resultArray;
 };
 
 const getParent = (disjointSet: DisjointSet): DisjointSet => {
