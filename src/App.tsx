@@ -27,7 +27,8 @@ type Edge = {
 
 type DisjointSet = {
   label: string;
-  parent: DisjointSet | null;
+  parent: string;
+  size: number;
 };
 
 type DisjointSetObject = {
@@ -78,22 +79,22 @@ const merge = (leftArray: Edge[], rightArray: Edge[]): Edge[] => {
   return resultArray;
 };
 
-const getParent = (disjointSet: DisjointSet): DisjointSet => {
-  let set = disjointSet;
-  while (set.parent !== null) {
-    set = set.parent;
+const root = (disjointSet: DisjointSet, sets: DisjointSetObject): string => {
+  while (disjointSet.parent !== disjointSet.label) {
+    disjointSet = sets[disjointSet.parent];
   }
-  return set;
+
+  return disjointSet.label;
 };
 
 function App() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [chosenEdges, setChosenEdges] = useState<Edge[]>([]);
+  const [disjointSets, setDisjointSets] = useState<DisjointSetObject>({});
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
-  const [visitedEdges, setVisitedEdges] = useState<Edge[]>([]);
   const [counter, setCounter] = useState(0);
-  const [sets, setSets] = useState<DisjointSetObject>({});
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -101,23 +102,35 @@ function App() {
     if (running) {
       timer = setTimeout(() => {
         if (counter < edges.length) {
-          const edge = edges[counter];
+          const sets: DisjointSetObject = JSON.parse(
+            JSON.stringify(disjointSets)
+          );
+          const localEdges: Edge[] = JSON.parse(JSON.stringify(edges));
+          const edge = localEdges[counter];
           const from = edge.from;
           const to = edge.to;
-          const parentFrom = getParent(sets[`${from}`]);
-          const parentTo = getParent(sets[`${to}`]);
-          if (parentFrom.label !== parentTo.label) {
+          const fromRoot = root(sets[`${from}`], sets);
+          const toRoot = root(sets[`${to}`], sets);
+          // Checking if they belong to the same set or not (no cycles)
+          if (fromRoot !== toRoot) {
             edge.color = "green";
-            if (parseInt(parentFrom.label) < parseInt(parentTo.label)) {
-              parentTo.parent = parentFrom;
+            // Choosing edge
+            setChosenEdges((prevEdges) => [...prevEdges, edge]);
+            // Union considering the set size
+            if (sets[fromRoot].size < sets[toRoot].size) {
+              sets[fromRoot].parent = sets[toRoot].label;
+              sets[toRoot].size += sets[fromRoot].size;
             } else {
-              parentFrom.parent = parentTo;
+              sets[toRoot].parent = sets[fromRoot].label;
+              sets[fromRoot].size += sets[toRoot].size;
             }
           } else {
+            // Discarding edge
             edge.color = "red";
           }
+          setEdges(localEdges);
+          setDisjointSets(sets);
           setStatus(`Analyzing (${edge.from} - ${edge.to})...`);
-          setVisitedEdges((prevEdges) => [...prevEdges, edge]);
           setCounter((prevCounter) => prevCounter + 1);
         } else {
           setRunning(false);
@@ -127,7 +140,7 @@ function App() {
     }
 
     return () => clearTimeout(timer);
-  }, [running, edges, visitedEdges, counter, sets]);
+  }, [running, edges, chosenEdges, counter, disjointSets]);
 
   const readMatrix = (matrix: number[][]) => {
     const nodesArray: Node[] = [];
@@ -151,9 +164,31 @@ function App() {
     setEdges(edgesArray);
   };
 
+  const initializeSets = (nodes: Node[]): DisjointSetObject => {
+    const disjointSet: DisjointSetObject = {};
+    for (let i = 0; i < nodes.length; i++) {
+      const set: DisjointSet = {
+        label: nodes[i].label,
+        parent: nodes[i].label,
+        size: 1,
+      };
+      disjointSet[set.label] = set;
+    }
+    return disjointSet;
+  };
+
+  const initKruskal = () => {
+    setStatus("Sorting edges...");
+    const sortedEdges = sortEdges([...edges]);
+    const sets: DisjointSetObject = initializeSets([...nodes]);
+    setRunning(true);
+    setDisjointSets(sets);
+    setEdges([...sortedEdges]);
+  };
+
   let solutionWeight = 0;
-  visitedEdges.forEach((edge: Edge) => {
-    if (edge.color === "green") solutionWeight += edge.weight;
+  chosenEdges.forEach((edge: Edge) => {
+    solutionWeight += edge.weight;
   });
 
   return (
@@ -209,20 +244,7 @@ function App() {
                 variant="contained"
                 color="success"
                 sx={{ marginTop: 2 }}
-                onClick={() => {
-                  setStatus("Sorting edges...");
-                  const sortedEdges = sortEdges([...edges]);
-                  const newSets: DisjointSetObject = {};
-                  nodes.forEach((node: Node) => {
-                    newSets[node.label] = {
-                      label: node.label,
-                      parent: null,
-                    };
-                  });
-                  setRunning(true);
-                  setSets(newSets);
-                  setEdges([...sortedEdges]);
-                }}
+                onClick={() => initKruskal()}
               >
                 Run
               </Button>
@@ -238,7 +260,7 @@ function App() {
                   {`Solution (weight:${solutionWeight})`}
                 </Typography>
                 <Graph
-                  graph={{ nodes, edges: visitedEdges }}
+                  graph={{ nodes, edges: chosenEdges }}
                   options={options}
                 />
               </>
