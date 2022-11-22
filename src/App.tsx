@@ -2,11 +2,16 @@ import { useState, useEffect } from "react";
 import {
   Box,
   Button,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
   List,
   ListItem,
   ListItemText,
-  Typography,
+  Radio,
+  RadioGroup,
   Stack,
+  Typography,
 } from "@mui/material";
 // @ts-ignore
 import Graph from "react-graph-vis";
@@ -96,6 +101,7 @@ function App() {
   const [finished, setFinished] = useState(false);
   const [counter, setCounter] = useState(0);
   const [status, setStatus] = useState("");
+  const [speed, setSpeed] = useState(1);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -136,11 +142,11 @@ function App() {
           setRunning(false);
           setFinished(true);
         }
-      }, 1000);
+      }, 1000 / speed);
     }
 
     return () => clearTimeout(timer);
-  }, [running, edges, chosenEdges, counter, disjointSets]);
+  }, [running, edges, chosenEdges, counter, disjointSets, speed]);
 
   const readMatrix = (matrix: number[][]) => {
     const nodesArray: Node[] = [];
@@ -191,11 +197,32 @@ function App() {
     solutionWeight += edge.weight;
   });
 
+  const changeSpeed = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSpeed(parseFloat((event.target as HTMLInputElement).value));
+  };
+
   return (
     <>
       <Typography align="center" variant="h2" gutterBottom>
         Kruskal Algorithm
       </Typography>
+      <Stack direction="row" justifyContent={"center"}>
+        <FormControl sx={{ alignItems: "center" }}>
+          <FormLabel id="speed-radio-buttons-group">Speed</FormLabel>
+          <RadioGroup
+            row
+            aria-labelledby="speed-radio-buttons-group"
+            name="speed-controlled-radio-buttons-group"
+            value={speed}
+            onChange={changeSpeed}
+          >
+            <FormControlLabel value="0.5" control={<Radio />} label="0.5" />
+            <FormControlLabel value="1" control={<Radio />} label="1" />
+            <FormControlLabel value="2" control={<Radio />} label="2" />
+            <FormControlLabel value="4" control={<Radio />} label="4" />
+          </RadioGroup>
+        </FormControl>
+      </Stack>
       <Box
         component="form"
         sx={{
